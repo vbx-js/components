@@ -1,0 +1,15 @@
+:host {
+    --vbx-button-color: #005723;
+    --vbx-button-color-hover: #50bf82;
+    display: inline-block;
+    color: var(--vbx-button-color);
+    max-width: 100%;
+}
+
+div.vbx-button__trigger {
+    cursor: pointer;
+
+    &:focus, &:hover, &:active {
+        color: var(--vbx-button-color-hover);
+    }
+}

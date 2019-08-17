@@ -3,13 +3,14 @@
     "shell": "src/index.js",
     "sources": [],
     "extraDependencies": [
-        "node_modules/@webcomponents/webcomponentsjs/**"
+        "node_modules/@webcomponents/webcomponentsjs/**",
+        "node_modules/web-animations-js/**"
     ],
     "builds": [
         {
             "name": "esm-bundled",
             "browserCapabilities": [
-                "es2015",
+                "es2017",
                 "modules"
             ],
             "js": {

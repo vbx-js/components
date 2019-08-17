@@ -1,9 +1,8 @@
 :host {
     --vbx-overlay-color: #fff;
-    --vbx-overlay-hover-color: #50bf82;
+    --vbx-overlay-color-hover: #50bf82;
     --vbx-font-size: 16px;
-    --vbx-overlay-background: rgba(0, 0, 0, 0.85);
-    
+    --vbx-overlay-background: rgba(0, 0, 0, 0.7);
     position: fixed;
     top: 0;
     bottom: 0;
@@ -17,7 +16,11 @@
     font-size: var(--vbx-font-size);
 }
 
-.vbx-background {
+:host([open]) {
+    display: flex;
+}
+
+.vbx-overlay__background {
     position: absolute;
     top: 0;
     bottom: 0;
@@ -28,23 +31,19 @@
     cursor: pointer;
 }
 
-:host([open]) {
-    display: flex;
-}
-
-.vbx-wrap {
+.vbx-overlay__wrap {
     width: 100vw;
     position: relative;
     transform: translateY(-30px);
 }
 
-.vbx-sizer {
+.vbx-overlay__sizer {
     position: relative;
     width: 100%;
     height: 0;
 }
 
-.vbx-content {
+.vbx-overlay__content {
     position: absolute;
     top: 0;
     bottom: 0;
@@ -52,7 +51,7 @@
     right: 0;
 }
 
-.vbx-video {
+.vbx-overlay__video {
     position: absolute;
     top: 0;
     bottom: 0;
@@ -70,7 +69,7 @@
     }
 }
 
-.vbx-bottom {
+.vbx-overlay__bottom {
     position: relative;
     top: 100%;
     background: #000;
@@ -81,7 +80,7 @@
     box-shadow: 0 0 40px -5px #000;
     transition: opacity .5s .1s ease-in-out;
 
-    .vbx-bottom__content {
+    .vbx-overlay__bottom-content {
         flex: auto 1 1;
         margin: 1em;
         font-weight: 400;
@@ -92,20 +91,22 @@
         transition-delay: 0s;
     }
 
-    .vbx-bottom__button {
+    .vbx-overlay__bottom-button {
         flex: 120px 0 0;
         margin: 0.5em;
         display: flex;
         align-items: center;
         justify-content: flex-end;
         text-transform: uppercase;
-        font-size: 1.2em;
+        font-size: 1.125em;
         cursor: pointer;
         transition: all .2s ease-in-out;
         transition-delay: inherit;
+        font-weight: 500;
 
         span {
             margin-top: 0.1em;
+            margin-right: 0.25em;
         }
 
         vbx-icon {
@@ -113,7 +114,7 @@
         }
 
         &:focus, &:hover, &:active {
-            color: var(--vbx-overlay-hover-color);
+            color: var(--vbx-overlay-color-hover);
         }
     }
 }

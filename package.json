@@ -9,9 +9,11 @@
         "tsc": "ttsc",
         "serve": "polymer serve",
         "watch": "ttsc -w",
-        "start": "concurrently \"yarn serve\" \"yarn watch\""
+        "start": "concurrently \"yarn serve\" \"yarn watch\"",
+        "lint": "tslint --fix --project ."
     },
     "devDependencies": {
+        "@ampproject/rollup-plugin-closure-compiler": "^0.10.0",
         "@liquid-js/ts-transform-scss": "^0.2.0",
         "@polymer/iron-demo-helpers": "^3.1.0",
         "@polymer/paper-checkbox": "^3.1.0",
@@ -21,7 +23,14 @@
         "mocha": "^6.2.0",
         "polymer-cli": "^1.9.11",
         "polyserve": "^0.27.15",
+        "rollup": "^1.19.4",
+        "rollup-plugin-closure-compiler": "^0.1.0",
+        "rollup-plugin-commonjs": "^10.0.2",
+        "rollup-plugin-node-resolve": "^5.2.0",
+        "rollup-plugin-terser": "^5.1.1",
+        "terser": "^4.1.4",
         "ts-node": "^8.3.0",
+        "tslint": "^5.18.0",
         "ttypescript": "^1.5.7",
         "typescript": "^3.5.3",
         "wct-mocha": "^1.0.1",
@@ -30,7 +39,8 @@
     "dependencies": {
         "@webcomponents/webcomponentsjs": "^2.2.10",
         "lit-element": "^2.2.1",
-        "tslib": "^1.10.0"
+        "tslib": "^1.10.0",
+        "web-animations-js": "^2.3.2"
     },
     "resolutions": {
         "@polymer/test-fixture": "^4.0.2",

@@ -1,0 +1,98 @@
+:host {
+    --vbx-inline-close-background: #005723;
+    --vbx-inline-close-background-hover: #50bf82;
+    --vbx-inline-close-color: #fff;
+    --vbx-inline-close-color-hover: #fff;
+    display: flex;
+    max-width: 100%;
+}
+
+.vbx-inline__wrap {
+    width: 100vw;
+    position: relative;
+    background: #000;
+
+    &:focus, &:hover, &:active {
+        .vbx-inline__close {
+            opacity: 1;
+        }
+    }
+}
+
+.vbx-inline__sizer {
+    position: relative;
+    width: 100%;
+    height: 0;
+}
+
+.vbx-inline__content {
+    position: absolute;
+    top: 0;
+    bottom: 0;
+    left: 0;
+    right: 0;
+}
+
+.vbx-inline__video {
+    position: absolute;
+    top: 0;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    z-index: 10;
+
+    iframe {
+        background-color: #000;
+        width: 100%;
+        height: 100%;
+        border: none;
+    }
+}
+
+.vbx-inline__close {
+    position: absolute;
+    top: 0;
+    right: 0;
+    width: 48px;
+    height: 48px;
+    margin: -24px -24px 0 0;
+    font-size: 24px;
+    line-height: 1;
+    cursor: pointer;
+    padding: 12px;
+    opacity: 0;
+    z-index: 300;
+    box-sizing: border-box;
+    transition: all .2s ease-in-out;
+
+    .vbx-inline__close-icons {
+        position: relative;
+
+        vbx-icon {
+            position: absolute;
+            top: 0;
+            left: 0;
+            transition: all .2s ease-in-out;
+
+            &[shape="circle"] {
+                color: var(--vbx-inline-close-background);
+            }
+
+            &[shape="close-small"] {
+                color: var(--vbx-inline-close-color);
+            }
+        }
+    }
+
+    &:focus, &:hover, &:active {
+        .vbx-inline__close-icons vbx-icon {
+            &[shape="circle"] {
+                color: var(--vbx-inline-close-background-hover);
+            }
+
+            &[shape="close-small"] {
+                color: var(--vbx-inline-close-color-hover);
+            }
+        }
+    }
+}
