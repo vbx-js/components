@@ -11,5 +11,10 @@ div.vbx-button__trigger {
 
     &:focus, &:hover, &:active {
         color: var(--vbx-button-color-hover);
+
+        ::slotted(*) {
+            --vbx-trigger-color: var(--vbx-button-color-hover);
+            --vbx-trigger-background: rgba(0, 0, 0, 0.7);
+        }
     }
 }

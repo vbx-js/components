@@ -1,0 +1,25 @@
+:host {
+    display: inline-flex;
+    max-width: 100%;
+    position: relative;
+}
+
+.vbx-trigger__button {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    bottom: 50%;
+    right: 50%;
+    width: 72px;
+    height: 72px;
+    margin: -36px;
+    border-radius: 100%;
+    background-color: var(--vbx-trigger-background, rgba(0, 0, 0, 0.5));
+    font-size: 48px;
+    color: var(--vbx-trigger-color, #fff);
+    transition: all .2s ease-in-out;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    box-shadow: 0 0 40px -5px #000;
+}

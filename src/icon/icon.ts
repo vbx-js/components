@@ -24,6 +24,9 @@ export class Icon extends LitElement {
                 <symbol id="circle" style="width:24px;height:24px" viewBox="0 0 24 24" id=".8066955455236873">
                     <path d="M2 12c0 5.521 4.477 10 10 10 5.521 0 10-4.479 10-10 0-5.523-4.479-10-10-10C6.477 2 2 6.477 2 12z"/>
                 </symbol>
+                <symbol id="play" style="width:24px;height:24px" viewBox="0 0 24 24" id=".8066955455236873">
+                    <path d="M8 5v14l11-7L8 5z"/>
+                </symbol>
             </svg>
             <svg class="${this.shape}" xmlns:xlink="http://www.w3.org/1999/xlink">
                 ${svg`<use fill="currentColor" href="${'#' + this.shape}"></use>`}
