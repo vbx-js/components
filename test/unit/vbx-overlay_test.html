@@ -1,0 +1,53 @@
+<!doctype html>
+<html lang="en">
+
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport"
+        content="width=device-width, minimum-scale=1, initial-scale=1, user-scalable=yes">
+    <title>vbx-overlay test</title>
+    <script src="../../node_modules/@webcomponents/webcomponentsjs/webcomponents-bundle.js"></script>
+    <script src="../../node_modules/chai/chai.js"></script>
+    <script src="../../node_modules/mocha/mocha.js"></script>
+    <script src="../../node_modules/wct-mocha/wct-mocha.js"></script>
+    <script type="module">
+        import '@polymer/test-fixture/test-fixture.js';
+    </script>
+    <script type="module"
+        src="../../src/overlay/overlay.js"></script>
+</head>
+
+<body>
+    <test-fixture id="basic">
+        <template>
+            <vbx-overlay></vbx-overlay>
+        </template>
+    </test-fixture>
+    <test-fixture id="changed-property">
+        <template>
+            <vbx-overlay open></vbx-overlay>
+        </template>
+    </test-fixture>
+    <script type="module">
+        suite('vbx-overlay', () => {
+
+            test('instantiating the element with default properties works', async () => {
+                const element = fixture('basic');
+                await element.updateComplete
+                assert.equal(element.open, false);
+            });
+
+            test('setting a property on the element works', async () => {
+                const element = fixture('changed-property');
+                await element.updateComplete
+                assert.equal(element.open, true);
+                element.open = false
+                await element.updateComplete
+                assert.equal(element.open, false);
+            });
+
+        });
+    </script>
+</body>
+
+</html>

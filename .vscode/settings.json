@@ -1,0 +1,24 @@
+{
+    "editor.insertSpaces": true,
+    "editor.tabSize": 4,
+    "editor.detectIndentation": false,
+    "editor.formatOnSave": true,
+    "html.format.wrapAttributes": "force",
+    "files.insertFinalNewline": true,
+    "files.trimFinalNewlines": false,
+    "typescript.tsdk": "node_modules\\typescript\\lib",
+    "files.exclude": {
+        "**/*.map": {
+            "when": "$(basename)"
+        },
+        "**/*.js": {
+            "when": "$(basename).ts"
+        },
+        "**/*.css": {
+            "when": "$(basename).scss"
+        },
+        "**/*.d.ts": {
+            "when": "$(basename).ts"
+        }
+    }
+}
