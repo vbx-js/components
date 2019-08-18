@@ -39,6 +39,7 @@
     "dependencies": {
         "@webcomponents/webcomponentsjs": "^2.2.10",
         "lit-element": "^2.2.1",
+        "resize-observer-polyfill": "^1.5.1",
         "tslib": "^1.10.0",
         "web-animations-js": "^2.3.2"
     },

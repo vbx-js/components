@@ -36,3 +36,40 @@ export function show(el: HTMLElement) {
         el.style.display = display || ''
     }
 }
+
+export function debounce<F extends () => any>(func: F, waitMilliseconds = 50, isImmediate = false) {
+    let timeoutId: any
+    let promise: Promise<ReturnType<F>>
+    let resolve: (val: ReturnType<F>) => void
+    let reject: (err: any) => void
+
+    const doLater = () => {
+        timeoutId = undefined
+        if (!isImmediate) {
+            Promise.resolve(func())
+                .then(resolve, reject)
+        }
+        promise = null
+        resolve = null
+        reject = null
+    }
+
+    return async () => {
+        if (timeoutId !== undefined) {
+            clearTimeout(timeoutId)
+        } else {
+            promise = new Promise<ReturnType<F>>((res, rej) => {
+                resolve = res
+                reject = rej
+            })
+        }
+
+        timeoutId = setTimeout(doLater, waitMilliseconds)
+
+        if (isImmediate && timeoutId === undefined) {
+            Promise.resolve(func())
+                .then(resolve, reject)
+        }
+        return promise
+    }
+}

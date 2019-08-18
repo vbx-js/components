@@ -1,0 +1,37 @@
+:host {
+    display: flex;
+}
+
+.vbx-slider__prev,
+.vbx-slider__next {
+    flex: 48px 0 0;
+    position: relative;
+    font-size: 48px;
+    cursor: pointer;
+
+    vbx-icon {
+        position: relative;
+        transform: translateY(-0.5em);
+    }
+}
+
+.vbx-slider__wrap {
+    flex: auto 1 1;
+    max-width: calc(100% - 96px);
+    position: relative;
+    overflow: hidden;
+}
+
+ul.vbx-slider__content {
+    display: flex;
+    padding: 0;
+    margin: 0;
+    justify-content: stretch;
+    align-items: flex-start;
+
+    & > li {
+        display: flex;
+        flex: auto 1 1;
+        margin: 12px;
+    }
+}

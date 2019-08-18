@@ -1,8 +1,10 @@
 import { css, customElement, html, LitElement, property } from 'lit-element'
+import ResizeObserver from 'resize-observer-polyfill'
 import { Origin } from '../helpers/interfaces'
 import { animate, clip, hide, show } from '../helpers/utils'
 import '../icon/icon'
 import { DEFAULT_HEIGHT, DEFAULT_WIDTH, INITIAL_WIDTH } from '../overlay/overlay'
+import { Slider } from '../slider/slider';
 
 export const TAG_NAME = 'vbx-inline'
 
@@ -60,21 +62,26 @@ export class Inline extends LitElement {
     @property({ type: Boolean })
     private contentReady: boolean = true
 
+    private get _inSlider() {
+        let p: HTMLElement = this
+        while (p && !(p instanceof Slider))
+            p = p.parentElement
+
+        return !!(p && p instanceof Slider)
+    }
+
     private _openingAnimation: Animation
     private _closingAnimations: Animation[]
     private _dirty = true
     private _origin: Origin
+    private _resizeObserver = new ResizeObserver(() => this.recalculateWidth())
 
-    static closeInstances() {
-        instances.forEach(i => i.hide())
+    static closeInstances(self?: Inline) {
+        instances.forEach(i => i != self && i.hide())
     }
 
     $(selector: string) {
         return this.shadowRoot.querySelector(selector) as HTMLElement
-    }
-
-    private _resizeListener = (_evt) => {
-        this.recalculateWidth()
     }
 
     private _setTargetVisibility(visible = !this.open) {
@@ -91,7 +98,16 @@ export class Inline extends LitElement {
             hide(this)
     }
 
+    /**
+     * Show inline player
+     *
+     * @param from Animation origin, specifying (x, y) and initial size
+     */
     async show(from?: Origin) {
+        if (from && from.w && from.h && this._inSlider) {
+            this.maxHeight = from.h / from.w * this.maxWidth
+        }
+
         if (this.open)
             return []
 
@@ -135,7 +151,7 @@ export class Inline extends LitElement {
     }
 
     /**
-     * Hide Videobox overlay
+     * Hide inline player
      */
     async hide() {
         // Check if already closed or closing
@@ -151,7 +167,7 @@ export class Inline extends LitElement {
         this.contentOpen = false
 
         const content = <HTMLDivElement>this.$('.vbx-inline__wrap')
-        if (this._origin && content) {
+        if (this._origin && content && !this._inSlider) {
             const origin = this._origin || {}
 
             await this.updateComplete
@@ -214,33 +230,12 @@ export class Inline extends LitElement {
         } else {
             this.open = false
         }
-
-        // const bg = this._bg
-        /*if (bg) {
-            const { animation, promise } = animate(bg, [
-                {
-                    opacity: 1
-                },
-                {
-                    opacity: 0
-                }
-            ])
-
-            this._closingAnimation = animation
-
-            await promise
-                .then(() => this.open = false)
-                .catch(() => { })
-                .then(() => this._closingAnimation = null)
-        } else {
-            this.open = false
-        }*/
     }
 
     /**
-     * Calculate video popup size
+     * Calculate player size
      *
-     * If popup is not open, label it as dirty and return.
+     * If player is not open, label it as dirty and return.
      *
      * @param w Maximum video width
      * @param h Maximum video height
@@ -280,51 +275,54 @@ export class Inline extends LitElement {
 
         await this.updateComplete
 
-        const maxW = clip(this.maxWidth, DEFAULT_WIDTH)
-        const maxH = clip(this.maxHeight, DEFAULT_HEIGHT)
+        if (!this._inSlider) {
 
-        const promises: Array<Promise<any>> = []
-        const from = {}
-        const to = {}
-        let d = 0
+            const maxW = clip(this.maxWidth, DEFAULT_WIDTH)
+            const maxH = clip(this.maxHeight, DEFAULT_HEIGHT)
 
-        // Exapnd from initial size
-        let initialW = INITIAL_WIDTH
-        if (origin.w || origin.w === 0 || origin.h || origin.h === 0) {
-            if (origin.w || origin.w === 0)
-                // Initial width is specified
-                initialW = origin.w
-            else
-                // Initial width isn't specified, calculate from initial height
-                initialW = origin.h * maxW / maxH
-        }
-        from['maxWidth'] = initialW + 'px'
-        to['maxWidth'] = this.width + 'px'
+            const promises: Array<Promise<any>> = []
+            const from = {}
+            const to = {}
+            let d = 0
 
-        if (!d)
-            d = 1.5 * Math.abs(initialW - this.width)
-
-        promises.push(animate(content, [from, to], d).promise)
-
-        // Change ratio when expanding
-        if (origin.h && origin.w) {
-            const sizer = <HTMLDivElement>this.$('.vbx-inline__sizer')
-            if (sizer) {
-                const r0 = 100 * maxH / maxW
-                const r = 100 * origin.h / origin.w
-
-                promises.push(animate(sizer, [
-                    {
-                        paddingBottom: r + '%'
-                    },
-                    {
-                        paddingBottom: r0 + '%'
-                    }
-                ], d).promise)
+            // Exapnd from initial size
+            let initialW = INITIAL_WIDTH
+            if (origin.w || origin.w === 0 || origin.h || origin.h === 0) {
+                if (origin.w || origin.w === 0)
+                    // Initial width is specified
+                    initialW = origin.w
+                else
+                    // Initial width isn't specified, calculate from initial height
+                    initialW = origin.h * maxW / maxH
             }
-        }
+            from['maxWidth'] = initialW + 'px'
+            to['maxWidth'] = this.width + 'px'
 
-        await Promise.all(promises)
+            if (!d)
+                d = 1.5 * Math.abs(initialW - this.width)
+
+            promises.push(animate(content, [from, to], d).promise)
+
+            // Change ratio when expanding
+            if (origin.h && origin.w) {
+                const sizer = <HTMLDivElement>this.$('.vbx-inline__sizer')
+                if (sizer) {
+                    const r0 = 100 * maxH / maxW
+                    const r = 100 * origin.h / origin.w
+
+                    promises.push(animate(sizer, [
+                        {
+                            paddingBottom: r + '%'
+                        },
+                        {
+                            paddingBottom: r0 + '%'
+                        }
+                    ], d).promise)
+                }
+            }
+
+            await Promise.all(promises)
+        }
 
         this.contentReady = true
     }
@@ -339,7 +337,7 @@ export class Inline extends LitElement {
                         <div class="vbx-inline__video">
                             ${this.contentReady ? html`<iframe allowfullscreen src="${this.src}" allow="autoplay"></iframe>` : ''}
                         </div>
-                        <div class="vbx-inline__close" @click="${() => this.hide()}">
+                        <div class="vbx-inline__close" @click="${this.hide}">
                             <div class="vbx-inline__close-icons"><vbx-icon shape="circle"></vbx-icon><vbx-icon shape="close-small"></vbx-icon></div>
                         </div>
                     </div>` : ''}
@@ -350,13 +348,13 @@ export class Inline extends LitElement {
 
     connectedCallback() {
         super.connectedCallback()
-        window.addEventListener('resize', this._resizeListener)
+        this._resizeObserver.observe(this)
         instances.add(this)
     }
 
     disconnectedCallback() {
         super.disconnectedCallback()
-        window.removeEventListener('resize', this._resizeListener)
+        this._resizeObserver.disconnect()
         instances.delete(this)
     }
 

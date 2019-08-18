@@ -1,4 +1,5 @@
 import { css, customElement, html, LitElement, property } from 'lit-element'
+import ResizeObserver from 'resize-observer-polyfill'
 import { Origin } from '../helpers/interfaces'
 import { animate, clip } from '../helpers/utils'
 import '../icon/icon'
@@ -17,10 +18,6 @@ export class Overlay extends LitElement {
         return [css`:inline {
             content: './overlay.scss';
         }`]
-    }
-
-    private get _bg() {
-        return <HTMLDivElement>this.$('.vbx-overlay__background')
     }
 
     @property({ type: Boolean, reflect: true })
@@ -50,20 +47,21 @@ export class Overlay extends LitElement {
     @property({ type: Boolean })
     private overlayReady: boolean = true
 
+    private get _bg() {
+        return <HTMLDivElement>this.$('.vbx-overlay__background')
+    }
+
     private _openingAnimation: Animation
     private _closingAnimation: Animation
     private _dirty = true
+    private _resizeObserver = new ResizeObserver(() => this.recalculateWidth())
 
-    static closeInstances() {
-        instances.forEach(i => i.hide())
+    static closeInstances(self?: Overlay) {
+        instances.forEach(i => i != self && i.hide())
     }
 
     $(selector: string) {
         return this.shadowRoot.querySelector(selector) as HTMLElement
-    }
-
-    private _resizeListener = (_evt) => {
-        this.recalculateWidth()
     }
 
     /**
@@ -304,7 +302,7 @@ export class Overlay extends LitElement {
         const maxWidth = clip(this.maxWidth, DEFAULT_WIDTH)
         const maxHeight = clip(this.maxHeight, DEFAULT_HEIGHT)
         return html`
-            <div class="vbx-overlay__background" @click="${() => this.hide()}" title="${this.i18nClose || 'Close'}"></div>
+            <div class="vbx-overlay__background" @click="${this.hide}" title="${this.i18nClose || 'Close'}"></div>
             <div class="vbx-overlay__wrap" style="max-width: ${this.width}px;">
                 <div class="vbx-overlay__sizer" style="padding-bottom: ${100 * maxHeight / maxWidth}%;">
                     ${this.contentOpen ? html`<div class="vbx-overlay__content">
@@ -313,7 +311,7 @@ export class Overlay extends LitElement {
                         </div>
                         ${this.overlayReady ? html`<div class="vbx-overlay__bottom">
                             <div class="vbx-overlay__bottom-content"><strong>${this.description}</strong></div>
-                            <div class="vbx-overlay__bottom-button" @click="${() => this.hide()}" title="${this.i18nClose || 'Close'}">
+                            <div class="vbx-overlay__bottom-button" @click="${this.hide}" title="${this.i18nClose || 'Close'}">
                                 <span>${this.i18nClose || 'Close'}</span>
                                 <vbx-icon shape="close"></vbx-icon>
                             </div>
@@ -326,13 +324,13 @@ export class Overlay extends LitElement {
 
     connectedCallback() {
         super.connectedCallback()
-        window.addEventListener('resize', this._resizeListener)
+        this._resizeObserver.observe(this)
         instances.add(this)
     }
 
     disconnectedCallback() {
         super.disconnectedCallback()
-        window.removeEventListener('resize', this._resizeListener)
+        this._resizeObserver.disconnect()
         instances.delete(this)
     }
 

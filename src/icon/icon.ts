@@ -1,5 +1,12 @@
 import { css, customElement, html, LitElement, property, svg } from 'lit-element'
 
+export enum IconDirection {
+    Up = 'up',
+    Down = 'down',
+    Left = 'left',
+    Right = 'right'
+}
+
 @customElement('vbx-icon')
 export class Icon extends LitElement {
 
@@ -11,6 +18,9 @@ export class Icon extends LitElement {
 
     @property({ type: String, reflect: true })
     shape: string
+
+    @property({ type: String, reflect: true })
+    direction: IconDirection
 
     render() {
         return html`
@@ -27,8 +37,11 @@ export class Icon extends LitElement {
                 <symbol id="play" style="width:24px;height:24px" viewBox="0 0 24 24" id=".8066955455236873">
                     <path d="M8 5v14l11-7L8 5z"/>
                 </symbol>
+                <symbol id="angle" style="width:24px;height:24px" viewBox="0 0 24 24" id=".8066955455236873">
+                    <path d="M10 6l6 6-6 6-1.406-1.406L13.188 12 8.594 7.406 10 6z"/>
+                </symbol>
             </svg>
-            <svg class="${this.shape}" xmlns:xlink="http://www.w3.org/1999/xlink">
+            <svg class="${this.shape} vbx-icon--${this.direction}" xmlns:xlink="http://www.w3.org/1999/xlink">
                 ${svg`<use fill="currentColor" href="${'#' + this.shape}"></use>`}
             </svg>
         `

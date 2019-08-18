@@ -7,4 +7,20 @@
 svg {
     width: 100%;
     height: 100%;
+
+    &.vbx-icon--up {
+        transform: rotate(270deg);
+    }
+
+    &.vbx-icon--down {
+        transform: rotate(90deg);
+    }
+
+    &.vbx-icon--left {
+        transform: rotate(180deg);
+    }
+
+    &.vbx-icon--right {
+        transform: rotate(0deg);
+    }
 }

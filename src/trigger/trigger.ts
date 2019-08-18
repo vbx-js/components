@@ -1,4 +1,4 @@
-import { LitElement, customElement, css, html } from 'lit-element';
+import { css, customElement, html, LitElement } from 'lit-element'
 
 @customElement('vbx-trigger')
 export class Trigger extends LitElement {
