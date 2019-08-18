@@ -4,7 +4,7 @@ import { Origin } from '../helpers/interfaces'
 import { animate, clip, hide, show } from '../helpers/utils'
 import '../icon/icon'
 import { DEFAULT_HEIGHT, DEFAULT_WIDTH, INITIAL_WIDTH } from '../overlay/overlay'
-import { Slider } from '../slider/slider';
+import { Slider } from '../slider/slider'
 
 export const TAG_NAME = 'vbx-inline'
 

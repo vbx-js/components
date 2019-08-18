@@ -3,7 +3,7 @@ import { repeat } from 'lit-html/directives/repeat'
 import ResizeObserver from 'resize-observer-polyfill'
 import { animate, clip, debounce } from '../helpers/utils'
 import '../icon/icon'
-import { TAG_NAME as INLINE_TAG_NAME, Inline } from '../inline/inline';
+import { Inline, TAG_NAME as INLINE_TAG_NAME } from '../inline/inline'
 
 export const DEFAULT_ITEM_WIDTH = 240
 
@@ -279,5 +279,9 @@ export class Slider extends LitElement {
         this._updateChildren()
         this.recalculateCount()
         this.recalculateCursorOffset()
+        setTimeout(async () => {
+            await this.updateComplete
+            this.recalculateCursorOffset()
+        }, 0)
     }
 }
