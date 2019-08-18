@@ -282,6 +282,6 @@ export class Slider extends LitElement {
         setTimeout(async () => {
             await this.updateComplete
             this.recalculateCursorOffset()
-        }, 0)
+        }, 10)
     }
 }
