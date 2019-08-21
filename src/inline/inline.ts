@@ -166,7 +166,11 @@ export class Inline extends LitElement {
 
         this.contentOpen = false
 
+        let pmW, smW
+        let ppB, spB
+
         const content = <HTMLDivElement>this.$('.vbx-inline__wrap')
+        const sizer = <HTMLDivElement>this.$('.vbx-inline__sizer')
         if (this._origin && content && !this._inSlider) {
             const origin = this._origin || {}
 
@@ -199,28 +203,31 @@ export class Inline extends LitElement {
 
             const { animation, promise } = animate(content, [from, to], d)
 
+            smW = content.style.maxWidth
+            content.style.maxWidth = pmW = to['maxWidth']
+
             this._closingAnimations.push(animation)
             promises.push(promise)
 
             // Change ratio when expanding
-            if (origin.h && origin.w) {
-                const sizer = <HTMLDivElement>this.$('.vbx-inline__sizer')
-                if (sizer) {
-                    const r0 = 100 * origin.h / origin.w
-                    const r = 100 * maxH / maxW
+            if (origin.h && origin.w && sizer) {
+                const r0 = 100 * origin.h / origin.w
+                const r = 100 * maxH / maxW
 
-                    const { animation, promise } = animate(sizer, [
-                        {
-                            paddingBottom: r + '%'
-                        },
-                        {
-                            paddingBottom: r0 + '%'
-                        }
-                    ], d)
+                const { animation, promise } = animate(sizer, [
+                    {
+                        paddingBottom: r + '%'
+                    },
+                    {
+                        paddingBottom: r0 + '%'
+                    }
+                ], d)
 
-                    this._closingAnimations.push(animation)
-                    promises.push(promise)
-                }
+                spB = sizer.style.paddingBottom
+                sizer.style.paddingBottom = ppB = r0 + '%'
+
+                this._closingAnimations.push(animation)
+                promises.push(promise)
             }
 
             await Promise.all(promises)
@@ -230,6 +237,14 @@ export class Inline extends LitElement {
         } else {
             this.open = false
         }
+
+        await this.updateComplete
+
+        if (content && content.style.maxWidth == pmW)
+            content.style.maxWidth = smW
+
+        if (sizer && sizer.style.paddingBottom == ppB)
+            sizer.style.paddingBottom = spB
     }
 
     /**
@@ -335,10 +350,10 @@ export class Inline extends LitElement {
                 <div class="vbx-inline__sizer" style="padding-bottom: ${100 * maxHeight / maxWidth}%;">
                     ${this.contentOpen ? html`<div class="vbx-inline__content">
                         <div class="vbx-inline__video">
-                            ${this.contentReady ? html`<iframe allowfullscreen src="${this.src}" allow="autoplay"></iframe>` : ''}
+                            <iframe allowfullscreen src="${this.contentReady && this.src || ''}" allow="autoplay"></iframe>
                         </div>
                         <div class="vbx-inline__close" @click="${this.hide}">
-                            <div class="vbx-inline__close-icons"><vbx-icon shape="circle"></vbx-icon><vbx-icon shape="close-small"></vbx-icon></div>
+                            <div class="vbx-inline__close-icons" title="${this.i18nClose || 'Close'}"><vbx-icon shape="circle"></vbx-icon><vbx-icon shape="close-small"></vbx-icon></div>
                         </div>
                     </div>` : ''}
                 </div>

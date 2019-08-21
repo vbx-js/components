@@ -4,7 +4,8 @@
     "sources": [],
     "extraDependencies": [
         "node_modules/@webcomponents/webcomponentsjs/**",
-        "node_modules/web-animations-js/**"
+        "node_modules/web-animations-js/**",
+        "src/base.css"
     ],
     "builds": [
         {

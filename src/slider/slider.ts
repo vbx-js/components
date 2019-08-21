@@ -29,6 +29,12 @@ export class Slider extends LitElement {
     @property({ type: String, reflect: true })
     selector: string
 
+    @property({ type: String, reflect: true, attribute: 'data-prev' })
+    i18nPrev: string
+
+    @property({ type: String, reflect: true, attribute: 'data-next' })
+    i18nNext: string
+
     @property({ type: Number })
     private active: number = 0
 
@@ -199,6 +205,8 @@ export class Slider extends LitElement {
             to
         ], d).promise)
 
+        content.style.transform = to['transform'] + ''
+
         const wrap = this.$('.vbx-slider__wrap')
         if (wrap && oldHeight != newHeight && (oldHeight || newHeight)) {
             promises.push(animate(wrap, [
@@ -209,11 +217,17 @@ export class Slider extends LitElement {
                     height: `${newHeight}px`
                 }
             ], d).promise)
+
+            wrap.style.height = `${newHeight}px`
         }
 
         await Promise.all(promises)
         this.start = this._getIndex(this.start + this.moving)
         this.moving = 0
+
+        await this.updateComplete
+
+        content.style.transform = ''
     }
 
     private _updateChildren() {
@@ -239,13 +253,13 @@ export class Slider extends LitElement {
 
         const cursors = this.active && this.active < this.total
         return html`
-            ${cursors ? html`<div class="vbx-slider__prev" @click="${this.prev}"><vbx-icon shape="angle" direction="left" style="top: ${this.cursorOffset}px;"></vbx-icon></div>` : ''}
+            ${cursors ? html`<div class="vbx-slider__prev" @click="${this.prev}" title="${this.i18nPrev || 'Previous'}" rel=prev><vbx-icon shape="angle" direction="left" style="top: ${this.cursorOffset}px;"></vbx-icon></div>` : ''}
             <div class="vbx-slider__wrap">
                 <ul class="vbx-slider__content" style="width: ${100 * items.length / this.active}%">
                     ${repeat(items, i => i, i => html`<li style="flex-basis: ${this._itemWidth}px; max-width: calc(${100 / items.length}% - 24px);"><slot name="${slotName(i)}"></slot></li>`)}
                 </ul>
             </div>
-            ${cursors ? html`<div class="vbx-slider__next" @click="${this.next}"><vbx-icon shape="angle" direction="right" style="top: ${this.cursorOffset}px;"></vbx-icon></div>` : ''}
+            ${cursors ? html`<div class="vbx-slider__next" @click="${this.next}" title="${this.i18nNext || 'Next'}" rel="next"><vbx-icon shape="angle" direction="right" style="top: ${this.cursorOffset}px;"></vbx-icon></div>` : ''}
         `
     }
 

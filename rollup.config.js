@@ -1,7 +1,8 @@
+import compiler from '@ampproject/rollup-plugin-closure-compiler'
 import commonjs from 'rollup-plugin-commonjs'
 import nodeResolve from 'rollup-plugin-node-resolve'
+import sourcemaps from 'rollup-plugin-sourcemaps'
 import { terser } from "rollup-plugin-terser"
-import compiler from '@ampproject/rollup-plugin-closure-compiler';
 
 export default {
     input: 'src/index.js',
@@ -9,7 +10,7 @@ export default {
         file: 'dist/bundle.js',
         format: 'iife',
         name: 'Videobox',
-        sourcemap: true
+        sourcemap: false
     },
     plugins: [
         nodeResolve({
@@ -18,8 +19,9 @@ export default {
         commonjs({
             extensions: ['.js', '.json']
         }),
+        sourcemaps(),
         compiler({
-            language_out: 'ECMASCRIPT_2017',
+            language_out: 'ECMASCRIPT6',
             rewrite_polyfills: false
         }),
         terser()

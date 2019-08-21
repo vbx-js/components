@@ -154,6 +154,8 @@ export class Overlay extends LitElement {
 
             this._closingAnimation = animation
 
+            bg.style.opacity = '0'
+
             await promise
                 .then(() => this.open = false)
                 .catch(() => { })
@@ -161,6 +163,11 @@ export class Overlay extends LitElement {
         } else {
             this.open = false
         }
+
+        await this.updateComplete
+
+        if (bg)
+            bg.style.opacity = ''
     }
 
     /**
@@ -307,7 +314,7 @@ export class Overlay extends LitElement {
                 <div class="vbx-overlay__sizer" style="padding-bottom: ${100 * maxHeight / maxWidth}%;">
                     ${this.contentOpen ? html`<div class="vbx-overlay__content">
                         <div class="vbx-overlay__video">
-                            ${this.overlayReady ? html`<iframe allowfullscreen src="${this.src}" allow="autoplay"></iframe>` : ''}
+                            <iframe allowfullscreen src="${this.overlayReady && this.src || ''}" allow="autoplay"></iframe>
                         </div>
                         ${this.overlayReady ? html`<div class="vbx-overlay__bottom">
                             <div class="vbx-overlay__bottom-content"><strong>${this.description}</strong></div>

@@ -1,0 +1,21 @@
+html {
+    --vbx-background-color: #000000;
+    --vbx-shadow-color: #000000;
+    --vbx-font-size: 16px;
+    --vbx-opacity: 0.7;
+    --vbx-opacity-light: 0.5;
+    --vbx-overlay-background: rgba(0, 0, 0, var(--vbx-opacity, 0.7));
+    --vbx-overlay-background-light: rgba(0, 0, 0, var(--vbx-opacity-light, 0.5));
+
+    /* Content without background */
+    --vbx-main-color: #005723;
+    --vbx-main-color-hover: #50bf82;
+
+    /* Content with background */
+    --vbx-invert-color: #ffffff;
+    --vbx-invert-color-hover: var(--vbx-main-color-hover);
+
+    /* COntent with overlay */
+    --vbx-overlay-color: var(--vbx-invert-color);
+    --vbx-overlay-color-hover: var(--vbx-invert-color-hover);
+}

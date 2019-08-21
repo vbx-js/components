@@ -8,6 +8,12 @@
     position: relative;
     font-size: 48px;
     cursor: pointer;
+    color: var(--vbx-main-color, #005723);
+    transition: color ease-in-out 0.2s;
+
+    &:focus, &:hover, &:active {
+        color: var(--vbx-main-color-hover, #50bf82);
+    }
 
     vbx-icon {
         position: relative;
