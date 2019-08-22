@@ -1,5 +1,4 @@
 import { css, customElement, html, LitElement, property } from 'lit-element'
-import ResizeObserver from 'resize-observer-polyfill'
 import { Origin } from '../helpers/interfaces'
 import { animate, clip, hide, show } from '../helpers/utils'
 import '../icon/icon'
@@ -53,9 +52,6 @@ export class Inline extends LitElement {
     @property({ type: String, reflect: true, attribute: 'data-close' })
     i18nClose: string
 
-    @property({ type: Number })
-    private width: number
-
     @property({ type: Boolean })
     private contentOpen: boolean = true
 
@@ -70,11 +66,13 @@ export class Inline extends LitElement {
         return !!(p && p instanceof Slider)
     }
 
+    private get _width() {
+        return clip(this.maxWidth, DEFAULT_WIDTH)
+    }
+
     private _openingAnimation: Animation
     private _closingAnimations: Animation[]
-    private _dirty = true
     private _origin: Origin
-    private _resizeObserver = new ResizeObserver(() => this.recalculateWidth())
 
     static closeInstances(self?: Inline) {
         instances.forEach(i => i != self && i.hide())
@@ -138,9 +136,6 @@ export class Inline extends LitElement {
         this.contentOpen = true
         this.contentReady = false
 
-        if (this._dirty)
-            await this.recalculateWidth()
-
         // Cancel possible closing animation
         if (this._closingAnimations) {
             this._closingAnimations.forEach(a => a.cancel())
@@ -166,7 +161,6 @@ export class Inline extends LitElement {
 
         this.contentOpen = false
 
-        let pmW, smW
         let ppB, spB
 
         const content = <HTMLDivElement>this.$('.vbx-inline__wrap')
@@ -195,16 +189,15 @@ export class Inline extends LitElement {
                     // Initial width isn't specified, calculate from initial height
                     initialW = origin.h * maxW / maxH
             }
-            from['maxWidth'] = this.width + 'px'
+            from['maxWidth'] = this._width + 'px'
             to['maxWidth'] = initialW + 'px'
 
             if (!d)
-                d = 1.5 * Math.abs(initialW - this.width)
+                d = 1.5 * Math.abs(initialW - this._width)
 
             const { animation, promise } = animate(content, [from, to], d)
 
-            smW = content.style.maxWidth
-            content.style.maxWidth = pmW = to['maxWidth']
+            content.style.maxWidth = to['maxWidth']
 
             this._closingAnimations.push(animation)
             promises.push(promise)
@@ -240,41 +233,11 @@ export class Inline extends LitElement {
 
         await this.updateComplete
 
-        if (content && content.style.maxWidth == pmW)
-            content.style.maxWidth = smW
+        if (content)
+            content.style.maxWidth = ''
 
         if (sizer && sizer.style.paddingBottom == ppB)
             sizer.style.paddingBottom = spB
-    }
-
-    /**
-     * Calculate player size
-     *
-     * If player is not open, label it as dirty and return.
-     *
-     * @param w Maximum video width
-     * @param h Maximum video height
-     */
-    async recalculateWidth(w?: number, h?: number) {
-        if (!this.open)
-            return this._dirty = true
-
-        w = clip(w || this.maxWidth, DEFAULT_WIDTH)
-        h = clip(h || this.maxHeight, DEFAULT_HEIGHT)
-
-        this._dirty = false
-
-        const r = h / w
-        await this.updateComplete
-        const rect = this.getBoundingClientRect()
-        const maxW = Math.min(rect.width, w)
-        const maxH = Math.min(rect.height, h)
-        const newH = r * maxW
-
-        if ((w <= maxW && h <= maxH) || newH <= maxH)
-            return this.width = Math.max(0, w)
-
-        return this.width = Math.max(0, maxH / r)
     }
 
     /**
@@ -311,10 +274,10 @@ export class Inline extends LitElement {
                     initialW = origin.h * maxW / maxH
             }
             from['maxWidth'] = initialW + 'px'
-            to['maxWidth'] = this.width + 'px'
+            to['maxWidth'] = this._width + 'px'
 
             if (!d)
-                d = 1.5 * Math.abs(initialW - this.width)
+                d = 1.5 * Math.abs(initialW - this._width)
 
             promises.push(animate(content, [from, to], d).promise)
 
@@ -346,7 +309,7 @@ export class Inline extends LitElement {
         const maxWidth = clip(this.maxWidth, DEFAULT_WIDTH)
         const maxHeight = clip(this.maxHeight, DEFAULT_HEIGHT)
         return html`
-            <div class="vbx-inline__wrap" style="max-width: ${this.width}px;">
+            <div class="vbx-inline__wrap" style="width: ${maxWidth}px;">
                 <div class="vbx-inline__sizer" style="padding-bottom: ${100 * maxHeight / maxWidth}%;">
                     ${this.contentOpen ? html`<div class="vbx-inline__content">
                         <div class="vbx-inline__video">
@@ -363,19 +326,15 @@ export class Inline extends LitElement {
 
     connectedCallback() {
         super.connectedCallback()
-        this._resizeObserver.observe(this)
         instances.add(this)
     }
 
     disconnectedCallback() {
         super.disconnectedCallback()
-        this._resizeObserver.disconnect()
         instances.delete(this)
     }
 
     update(changedProps: Map<string | number | symbol, unknown>) {
-        if (changedProps.has('maxWidth') || changedProps.has('maxHeight'))
-            this.recalculateWidth(this.maxWidth, this.maxHeight)
         if (changedProps.has('open')) {
             this._setTargetVisibility()
             this.dispatchEvent(new CustomEvent(EventType.OpenChange, {
@@ -385,9 +344,5 @@ export class Inline extends LitElement {
             }))
         }
         return super.update(changedProps)
-    }
-
-    firstUpdated() {
-        this.recalculateWidth()
     }
 }

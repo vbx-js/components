@@ -19,3 +19,15 @@ html {
     --vbx-overlay-color: var(--vbx-invert-color);
     --vbx-overlay-color-hover: var(--vbx-invert-color-hover);
 }
+
+vbx-slider vbx-button {
+    flex: auto 0 0;
+}
+
+vbx-button img {
+    flex: auto 0 0;
+}
+
+vbx-trigger img {
+    flex: auto 0 0;
+}

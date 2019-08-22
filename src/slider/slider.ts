@@ -230,6 +230,9 @@ export class Slider extends LitElement {
         content.style.transform = ''
     }
 
+    /**
+     * Assign each child element to a slot
+     */
     private _updateChildren() {
         this._items = Array.from<HTMLElement>(<any>this.children)
         this._items

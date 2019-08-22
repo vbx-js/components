@@ -310,7 +310,7 @@ export class Overlay extends LitElement {
         const maxHeight = clip(this.maxHeight, DEFAULT_HEIGHT)
         return html`
             <div class="vbx-overlay__background" @click="${this.hide}" title="${this.i18nClose || 'Close'}"></div>
-            <div class="vbx-overlay__wrap" style="max-width: ${this.width}px;">
+            <div class="vbx-overlay__wrap" style="width: ${this.width}px;">
                 <div class="vbx-overlay__sizer" style="padding-bottom: ${100 * maxHeight / maxWidth}%;">
                     ${this.contentOpen ? html`<div class="vbx-overlay__content">
                         <div class="vbx-overlay__video">

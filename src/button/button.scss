@@ -1,6 +1,6 @@
 :host {
     display: inline-block;
-    color: var(--vbx-main-color);
+    color: var(--vbx-main-color, #005723);
     max-width: 100%;
 }
 
@@ -8,11 +8,11 @@ div.vbx-button__trigger {
     cursor: pointer;
 
     &:focus, &:hover, &:active {
-        color: var(--vbx-main-color-hover);
+        color: var(--vbx-main-color-hover, #50bf82);
 
         ::slotted(*) {
-            --vbx-trigger-color: var(--vbx-overlay-color-hover);
-            --vbx-trigger-background: var(--vbx-overlay-background);
+            --vbx-trigger-color: var(--vbx-overlay-color-hover, #50bf82);
+            --vbx-trigger-background: var(--vbx-overlay-background, rgba(0, 0, 0, var(--vbx-opacity, 0.7)));
         }
     }
 }
