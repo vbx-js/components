@@ -1,19 +1,14 @@
-import { css, customElement, html, LitElement, property } from 'lit-element'
+import { css, customElement, html, LitElement, property, query } from 'lit-element'
+import { DEFAULT_HEIGHT, DEFAULT_WIDTH, INITIAL_WIDTH, INLINE_TAG_NAME, PlayerEventType } from '../helpers/constants'
 import { Origin } from '../helpers/interfaces'
-import { animate, clip, hide, show } from '../helpers/utils'
+import { animate, clip, eventKeys, hide, show } from '../helpers/utils'
 import '../icon/icon'
-import { DEFAULT_HEIGHT, DEFAULT_WIDTH, INITIAL_WIDTH } from '../overlay/overlay'
+import { Pagination } from '../pagination/pagination'
 import { Slider } from '../slider/slider'
-
-export const TAG_NAME = 'vbx-inline'
-
-export enum EventType {
-    OpenChange = 'open-change'
-}
 
 const instances = new Set<Inline>()
 
-@customElement(TAG_NAME)
+@customElement(INLINE_TAG_NAME)
 export class Inline extends LitElement {
 
     static get styles() {
@@ -21,18 +16,6 @@ export class Inline extends LitElement {
             content: './inline.scss';
         }`]
     }
-    set target(val: HTMLElement) {
-        if (val != this._target) {
-            this._setTargetVisibility(true)
-            this._target = val
-            this._setTargetVisibility()
-        }
-    }
-    get target() {
-        return this._target
-    }
-
-    private _target: HTMLElement
 
     @property({ type: Boolean, reflect: true })
     open: boolean = false
@@ -58,56 +41,68 @@ export class Inline extends LitElement {
     @property({ type: Boolean })
     private contentReady: boolean = true
 
-    private get _inSlider() {
+    @query('.vbx-inline__video') private _inlineVideo: HTMLElement
+    @query('.vbx-inline__wrap') private _inlineWrap: HTMLElement
+    @query('.vbx-inline__sizer') private _inlineSizer: HTMLElement
+
+    private _openingAnimation: Animation
+    private _closingAnimations: Animation[]
+    private _origin: Origin
+    private _target: HTMLElement
+
+    private get _inPager() {
         let p: HTMLElement = this
-        while (p && !(p instanceof Slider))
+        while (p && !(p instanceof Slider || p instanceof Pagination))
             p = p.parentElement
 
-        return !!(p && p instanceof Slider)
+        return !!(p && (p instanceof Slider || p instanceof Pagination))
     }
 
     private get _width() {
         return clip(this.maxWidth, DEFAULT_WIDTH)
     }
 
-    private _openingAnimation: Animation
-    private _closingAnimations: Animation[]
-    private _origin: Origin
+    /**
+     * Target element, i.e. element which is replaced by this player
+     */
+    set target(val: HTMLElement) {
+        if (val != this._target) {
+            this._setTargetVisibility(true)
+            this._target = val
+            this._setTargetVisibility()
+        }
+    }
+    get target() {
+        return this._target
+    }
 
     static closeInstances(self?: Inline) {
         instances.forEach(i => i != self && i.hide())
     }
 
-    $(selector: string) {
-        return this.shadowRoot.querySelector(selector) as HTMLElement
-    }
-
-    private _setTargetVisibility(visible = !this.open) {
-        if (this._target) {
-            if (visible)
-                show(this._target)
-            else
-                hide(this._target)
-        }
-
-        if (!visible)
-            show(this)
-        else
-            hide(this)
-    }
+    /**
+     * Called when player closes and we want to transfer focus to another element
+     *
+     * If triggering player through an external function, be sure to override this
+     * callback before calling {@link Inline.open}.
+     */
+    onPlayerBlur = () => { }
 
     /**
      * Show inline player
      *
      * @param from Animation origin, specifying (x, y) and initial size
+     * @param focus If true, focus this element when video opens
      */
-    async show(from?: Origin) {
-        if (from && from.w && from.h && this._inSlider) {
+    async show(from?: Origin, focus = false) {
+        // Keep target proprtions
+        if (this._inPager && from && from.w && from.h) {
             this.maxHeight = from.h / from.w * this.maxWidth
         }
 
+        // Check if already open
         if (this.open)
-            return []
+            return
 
         // Cancel any leftover opening animation
         if (this._openingAnimation) {
@@ -120,6 +115,7 @@ export class Inline extends LitElement {
                 instance.hide()
         })
 
+        // Get origin from target
         if (!from && this._target) {
             this._setTargetVisibility(true)
             const rect = this._target.getBoundingClientRect()
@@ -129,9 +125,13 @@ export class Inline extends LitElement {
                 w: rect.width,
                 h: rect.height
             }
+
+            // Keep target proprtions
+            if (this._inPager)
+                this.maxHeight = from.h / from.w * this.maxWidth
         }
 
-        // Set state to open
+        // Set state to open, but not ready
         this.open = true
         this.contentOpen = true
         this.contentReady = false
@@ -142,13 +142,25 @@ export class Inline extends LitElement {
             this._closingAnimations = null
         }
 
-        return this.animateContent(from || {})
+        await this._animateContent(from || {})
+
+        const video = this._inlineVideo
+        if (focus && video)
+            video.focus()
     }
 
     /**
      * Hide inline player
+     *
+     * @param evt Mouse event
+     * @param notifyBlur If true, call {@link Overlay.onPlayerBlur} callback
      */
-    async hide() {
+    async hide(evt?: MouseEvent, notifyBlur = false) {
+        if (evt) {
+            evt.stopPropagation()
+            evt.preventDefault()
+        }
+
         // Check if already closed or closing
         if (!this.open || this._closingAnimations)
             return
@@ -163,9 +175,9 @@ export class Inline extends LitElement {
 
         let ppB, spB
 
-        const content = <HTMLDivElement>this.$('.vbx-inline__wrap')
-        const sizer = <HTMLDivElement>this.$('.vbx-inline__sizer')
-        if (this._origin && content && !this._inSlider) {
+        const wrap = this._inlineWrap
+        const sizer = this._inlineSizer
+        if (this._origin && wrap && !this._inPager) {
             const origin = this._origin || {}
 
             await this.updateComplete
@@ -195,9 +207,9 @@ export class Inline extends LitElement {
             if (!d)
                 d = 1.5 * Math.abs(initialW - this._width)
 
-            const { animation, promise } = animate(content, [from, to], d)
+            const { animation, promise } = animate(wrap, [from, to], d)
 
-            content.style.maxWidth = to['maxWidth']
+            wrap.style.maxWidth = to['maxWidth']
 
             this._closingAnimations.push(animation)
             promises.push(promise)
@@ -233,11 +245,14 @@ export class Inline extends LitElement {
 
         await this.updateComplete
 
-        if (content)
-            content.style.maxWidth = ''
+        if (wrap)
+            wrap.style.maxWidth = ''
 
         if (sizer && sizer.style.paddingBottom == ppB)
             sizer.style.paddingBottom = spB
+
+        if (notifyBlur && this.onPlayerBlur)
+            this.onPlayerBlur()
     }
 
     /**
@@ -245,15 +260,15 @@ export class Inline extends LitElement {
      *
      * @param origin Animation origin, specifying (x, y) and initial size
      */
-    private async animateContent(origin: Origin) {
+    private async _animateContent(origin: Origin) {
         this._origin = origin
-        const content = <HTMLDivElement>this.$('.vbx-inline__wrap')
-        if (!content)
+        const wrap = this._inlineWrap
+        if (!wrap)
             return
 
         await this.updateComplete
 
-        if (!this._inSlider) {
+        if (!this._inPager) {
 
             const maxW = clip(this.maxWidth, DEFAULT_WIDTH)
             const maxH = clip(this.maxHeight, DEFAULT_HEIGHT)
@@ -279,11 +294,11 @@ export class Inline extends LitElement {
             if (!d)
                 d = 1.5 * Math.abs(initialW - this._width)
 
-            promises.push(animate(content, [from, to], d).promise)
+            promises.push(animate(wrap, [from, to], d).promise)
 
             // Change ratio when expanding
             if (origin.h && origin.w) {
-                const sizer = <HTMLDivElement>this.$('.vbx-inline__sizer')
+                const sizer = this._inlineSizer
                 if (sizer) {
                     const r0 = 100 * maxH / maxW
                     const r = 100 * origin.h / origin.w
@@ -305,18 +320,65 @@ export class Inline extends LitElement {
         this.contentReady = true
     }
 
+    private _setTargetVisibility(visible = !this.open) {
+        if (this._target) {
+            if (visible)
+                show(this._target)
+            else
+                hide(this._target)
+        }
+
+        if (!visible)
+            show(this)
+        else
+            hide(this)
+    }
+
+    @eventKeys(
+        'Enter', 13,
+        'Space', 32
+    )
+    private _closeKeyPress(evt: KeyboardEvent) {
+        evt.stopPropagation()
+        evt.preventDefault()
+        // Transfer focus when closing through keyboard
+        this.hide(undefined, true)
+    }
+
+    @eventKeys(
+        'Escape', 27,
+        'KeyX', 88
+    )
+    private _keyPress(evt: KeyboardEvent) {
+        evt.stopPropagation()
+        evt.preventDefault()
+        // Transfer focus when closing through keyboard
+        this.hide(undefined, true)
+    }
+
     render() {
         const maxWidth = clip(this.maxWidth, DEFAULT_WIDTH)
         const maxHeight = clip(this.maxHeight, DEFAULT_HEIGHT)
         return html`
-            <div class="vbx-inline__wrap" style="width: ${maxWidth}px;">
-                <div class="vbx-inline__sizer" style="padding-bottom: ${100 * maxHeight / maxWidth}%;">
+            <div class="vbx-inline__wrap"
+                style="width: ${maxWidth}px;" >
+                <div class="vbx-inline__sizer"
+                    style="padding-bottom: ${100 * maxHeight / maxWidth}%;">
                     ${this.contentOpen ? html`<div class="vbx-inline__content">
-                        <div class="vbx-inline__video">
-                            <iframe allowfullscreen src="${this.contentReady && this.src || ''}" allow="autoplay"></iframe>
+                        <div class="vbx-inline__video"
+                            tabindex="0"
+                            @keydown="${this._keyPress}">
+                            <iframe allowfullscreen
+                                src="${this.contentReady && this.src || ''}"
+                                allow="autoplay"
+                                tabindex="-1"></iframe>
                         </div>
-                        <div class="vbx-inline__close" @click="${this.hide}">
-                            <div class="vbx-inline__close-icons" title="${this.i18nClose || 'Close'}"><vbx-icon shape="circle"></vbx-icon><vbx-icon shape="close-small"></vbx-icon></div>
+                        <div class="vbx-inline__close"
+                            @click="${this.hide}"
+                            @keydown="${this._closeKeyPress}"
+                            tabindex="0">
+                            <div class="vbx-inline__close-icons"
+                                title="${this.i18nClose || 'Close'}"><vbx-icon shape="circle"></vbx-icon><vbx-icon shape="close-small"></vbx-icon></div>
                         </div>
                     </div>` : ''}
                 </div>
@@ -334,15 +396,15 @@ export class Inline extends LitElement {
         instances.delete(this)
     }
 
-    update(changedProps: Map<string | number | symbol, unknown>) {
+    updated(changedProps: Map<string | number | symbol, unknown>) {
         if (changedProps.has('open')) {
             this._setTargetVisibility()
-            this.dispatchEvent(new CustomEvent(EventType.OpenChange, {
+            this.dispatchEvent(new CustomEvent(PlayerEventType.OpenChange, {
                 detail: {
                     open: !!this.open
                 }
             }))
         }
-        return super.update(changedProps)
+        return super.updated(changedProps)
     }
 }

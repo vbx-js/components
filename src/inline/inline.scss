@@ -82,6 +82,8 @@
     }
 
     &:focus, &:hover, &:active {
+        opacity: 1;
+
         .vbx-inline__close-icons vbx-icon {
             &[shape="circle"] {
                 color: var(--vbx-main-color-hover, #50bf82);

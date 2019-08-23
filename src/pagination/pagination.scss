@@ -1,0 +1,61 @@
+:host {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: stretch;
+    align-items: flex-start;
+}
+
+ul.vbx-pagination__wrap {
+    display: flex;
+    padding: 0;
+    margin: 0;
+    justify-content: stretch;
+    align-items: flex-start;
+    flex: auto 1 1;
+    flex-wrap: wrap;
+    max-width: 100%;
+
+    & > li {
+        display: flex;
+        flex: auto 1 1;
+
+        &:empty {
+            margin-top: 0;
+            margin-bottom: 0;
+        }
+    }
+}
+
+ul.vbx-pagination__pages {
+    display: flex;
+    padding: 0;
+    margin: 0;
+    justify-content: center;
+    align-items: center;
+    flex: auto 1 1;
+    max-width: 100%;
+
+    & > li {
+        display: block;
+        padding: 0.5em 1em;
+        color: var(--vbx-pagination-color, #005723);
+        background-color: var(--vbx-pagination-background, rgba(0, 0, 0, 0));
+        cursor: pointer;
+        transition: all 0.2s ease-in-out;
+
+        &:focus, &:hover, &:active {
+            color: var(--vbx-pagination-color-hover, #005723);
+            background-color: var(--vbx-pagination-background-hover, #50bf82);
+        }
+
+        &.vbx-pagination__page--active {
+            color: var(--vbx-pagination-color-active, #005723);
+            background-color: var(--vbx-pagination-background-active, #50bf82);
+            transition: none;
+        }
+
+        &:not(:last-child) {
+            margin-right: 1px;
+        }
+    }
+}

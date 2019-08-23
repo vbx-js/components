@@ -1,11 +1,10 @@
-import { css, customElement, html, LitElement, property } from 'lit-element'
+import { css, customElement, html, LitElement, property, query } from 'lit-element'
 import { repeat } from 'lit-html/directives/repeat'
 import ResizeObserver from 'resize-observer-polyfill'
-import { animate, clip, debounce } from '../helpers/utils'
+import { DEFAULT_ITEM_WIDTH, INLINE_TAG_NAME } from '../helpers/constants'
+import { animate, clip, debounce, eventKeys } from '../helpers/utils'
 import '../icon/icon'
-import { Inline, TAG_NAME as INLINE_TAG_NAME } from '../inline/inline'
-
-export const DEFAULT_ITEM_WIDTH = 240
+import { Inline } from '../inline/inline'
 
 function slotName(index: number) {
     return `vbx-slider__item-${index}`
@@ -53,6 +52,12 @@ export class Slider extends LitElement {
     @property({ type: Number })
     private cursorOffset = 0
 
+    @property({ type: Number })
+    private waitUpdates = 0
+
+    @query('.vbx-slider__content') private _sliderContent: HTMLElement
+    @query('.vbx-slider__wrap') private _sliderWrap: HTMLElement
+
     private get _itemWidth() {
         return Math.max(0, clip(this.itemWidth, DEFAULT_ITEM_WIDTH)) || DEFAULT_ITEM_WIDTH
     }
@@ -70,80 +75,67 @@ export class Slider extends LitElement {
     private get _activeItems() {
         const start = this._start
         return this.total > 0
-            ? new Array(this.active + Math.abs(this.moving)).fill(0).map((_v, i) => this._getIndex(start + i))
+            ? new Array(this.active + Math.abs(this.moving)).fill(0).map((_v, i) => this._clampIndex(start + i))
             : []
     }
 
     private _items = new Array<HTMLElement>()
     private _width: number
-    private _resizeObserver = new ResizeObserver((changes) => {
+    private readonly _resizeObserver = new ResizeObserver((changes) => {
         const c = (changes || []).find(c => c && c.target == this && c.contentRect.width != this._width)
         if (c) {
             this._width = c.contentRect.width
             this.recalculateCount()
         }
     })
-    private _mutationObserver = new MutationObserver(() => this._updateChildren())
+    private readonly _mutationObserver = new MutationObserver(() => this._updateChildren())
 
-    private _startMoving = debounce(async (): Promise<void> => {
-        if (!this.pendingMove || this.moving)
-            return
-
-        const move = this.total
-            ? this.pendingMove % this.total
-            : 0
-
-        const content = this.$('.vbx-slider__content')
-        let oldHeight = 0
-        let newHeight = 0
-        if (content) {
-            oldHeight = content.getBoundingClientRect().height
-
-            const start = this.start
-            this.start = this._getIndex(this.start + move)
-
-            await this.updateComplete
-
-            newHeight = content.getBoundingClientRect().height
-            const activeI = new Set(this._activeItems)
-            this.recalculateCursorOffset()
-
-            this.start = start
-
-            await this.updateComplete
-
-            new Array<Inline>()
-                .concat(...this._items
-                    .filter((_v, i) => !activeI.has(i))
-                    .map(el => Array.from<Inline>(el.querySelectorAll(INLINE_TAG_NAME)))
-                )
-                .forEach(p => p.hide())
+    /**
+     * Move slider backward
+     *
+     * Subsequent calls are batched.
+     *
+     * @param evt Click event
+     */
+    async prev(evt?: MouseEvent) {
+        if (evt) {
+            evt.stopPropagation()
+            evt.preventDefault()
         }
 
-        this.moving = move
-        this.pendingMove = 0
+        const move = -this._moveCount
+        this.pendingMove += move
+        return this._startMoving()
+    }
 
-        await this.updateComplete
-        await this._animate(oldHeight, newHeight)
-        await this.updateComplete
-        if (this.pendingMove)
-            return this._startMoving()
-        return
-    }, 200)
+    /**
+     * Move slider forward
+     *
+     * Subsequent calls are batched.
+     *
+     * @param evt Click event
+     */
+    async next(evt?: MouseEvent) {
+        if (evt) {
+            evt.stopPropagation()
+            evt.preventDefault()
+        }
 
-    $(selector: string) {
-        return this.shadowRoot.querySelector(selector) as HTMLElement
+        const move = this._moveCount
+        this.pendingMove += move
+        return this._startMoving()
     }
 
     recalculateCount() {
         const width = this.getBoundingClientRect().width
         const itemWidth = this._itemWidth
 
-        const visible = Math.max(1, Math.round(width / itemWidth))
-        if (visible >= this.total)
-            this.active = visible
-        else
-            this.active = Math.max(1, Math.round((width - 96) / itemWidth))
+        let visible = Math.max(1, Math.floor(width / itemWidth))
+        if (visible < this.total)
+            // If there isn't enough room for all items, subtract cursor width
+            visible = Math.max(1, Math.floor((width - 96) / itemWidth))
+
+        this.active = visible
     }
 
     recalculateCursorOffset() {
@@ -161,30 +153,100 @@ export class Slider extends LitElement {
             })
             .filter(mid => mid !== undefined)
 
-        if (midpoints.length < 1)
+        if (midpoints.length < 1) {
+            this.cursorOffset = this.getBoundingClientRect().height / 2
             return
+        }
 
         const midpoint = midpoints.reduce((t, v) => t + v, 0) / midpoints.length
         const top = this.getBoundingClientRect().top
         this.cursorOffset = midpoint - top
     }
 
-    async prev() {
-        const move = -this._moveCount
-        this.pendingMove += move
-        return this._startMoving()
+    /**
+     * Assign each child element to a slot
+     */
+    private _updateChildren() {
+        this._items = Array.from<HTMLElement>(<any>this.children)
+        this._items
+            .forEach((el, i) => el.slot = slotName(i))
+        this.total = this._items.length
     }
 
-    async next() {
-        const move = this._moveCount
-        this.pendingMove += move
-        return this._startMoving()
+    /**
+     * Executre any pending move
+     */
+    @debounce(200)
+    private async _startMoving(): Promise<void> {
+        if (!this.pendingMove || this.moving)
+            return
+
+        const move = this.total
+            ? this.pendingMove % this.total
+            : 0
+        this.pendingMove = 0
+
+        try {
+            let oldHeight = 0
+            let newHeight = 0
+            const content = this._sliderContent
+            if (content)
+                oldHeight = content.getBoundingClientRect().height
+
+            // Render new state
+            const start = this.start
+            this.start = this._clampIndex(this.start + move)
+            await this.updateComplete
+
+            if (content)
+                newHeight = content.getBoundingClientRect().height
+            const activeI = new Set(this._activeItems)
+
+            // Calculate new cursor position
+            this.recalculateCursorOffset()
+
+            // Revert to current state
+            this.start = start
+            await this.updateComplete
+
+            // Close any active inline players
+            new Array<Inline>()
+                .concat(...this._items
+                    .filter((_v, i) => !activeI.has(i))
+                    .map(el => Array.from<Inline>(el.querySelectorAll(INLINE_TAG_NAME)))
+                )
+                .forEach(p => p.hide())
+
+            // Execute move
+            this.moving = move
+
+            await this.updateComplete
+            await this._animateItems(oldHeight, newHeight)
+            await this.updateComplete
+        } catch (e) {
+            console.error(e)
+        }
+
+        // Repeat if another move was requested in the meantime
+        if (this.pendingMove)
+            return this._startMoving()
     }
 
-    private async _animate(oldHeight?: number, newHeight?: number) {
-        const content = this.$('.vbx-slider__content')
+    /**
+     * Animate items
+     */
+    private async _animateItems(): Promise<void>
+    /**
+     * Animate items
+     *
+     * @param oldHeight Current container height
+     * @param newHeight New container height
+     */
+    private async _animateItems(oldHeight: number, newHeight: number): Promise<void>
+    private async _animateItems(oldHeight?: number, newHeight?: number): Promise<void> {
+        const content = this._sliderContent
         if (!this.moving || !content)
-            return null
+            return
 
         const from: Keyframe = {}
         const to: Keyframe = {}
@@ -207,7 +269,7 @@ export class Slider extends LitElement {
 
         content.style.transform = to['transform'] + ''
 
-        const wrap = this.$('.vbx-slider__wrap')
+        const wrap = this._sliderWrap
         if (wrap && oldHeight != newHeight && (oldHeight || newHeight)) {
             promises.push(animate(wrap, [
                 {
@@ -222,25 +284,17 @@ export class Slider extends LitElement {
         }
 
         await Promise.all(promises)
-        this.start = this._getIndex(this.start + this.moving)
+        this.start = this._clampIndex(this.start + this.moving)
         this.moving = 0
 
         await this.updateComplete
 
         content.style.transform = ''
+        if (wrap)
+            wrap.style.height = ''
     }
 
-    /**
-     * Assign each child element to a slot
-     */
-    private _updateChildren() {
-        this._items = Array.from<HTMLElement>(<any>this.children)
-        this._items
-            .forEach((el, i) => el.slot = slotName(i))
-        this.total = this._items.length
-    }
-
-    private _getIndex(val: number) {
+    private _clampIndex(val: number) {
         if (this.total < 1)
             return 0
 
@@ -251,18 +305,73 @@ export class Slider extends LitElement {
         return val
     }
 
+    @eventKeys(
+        'Enter', 13,
+        'Space', 12
+    )
+    private _prevKeyPress(evt: KeyboardEvent) {
+        evt.stopPropagation()
+        evt.preventDefault()
+        this.prev()
+    }
+
+    @eventKeys(
+        'Enter', 13,
+        'Space', 12
+    )
+    private _nextKeyPress(evt: KeyboardEvent) {
+        evt.stopPropagation()
+        evt.preventDefault()
+        this.next()
+    }
+
+    @eventKeys(
+        'ArrowLeft', 37,
+        'ArrowRight', 39
+    )
+    private _arrowKeyPress(evt: KeyboardEvent) {
+        if (evt.code == 'ArrowLeft' ||
+            evt.key == 'ArrowLeft' ||
+            // tslint:disable-next-line:deprecation
+            evt.keyCode == 37
+        )
+            this.prev()
+        else
+            this.next()
+
+        // On keyboard navigation transfer focus to wrapper
+        this._sliderWrap.focus()
+    }
+
     render() {
         const items = this._activeItems
+        const itemWidth = this._itemWidth
 
         const cursors = this.active && this.active < this.total
         return html`
-            ${cursors ? html`<div class="vbx-slider__prev" @click="${this.prev}" title="${this.i18nPrev || 'Previous'}" rel=prev><vbx-icon shape="angle" direction="left" style="top: ${this.cursorOffset}px;"></vbx-icon></div>` : ''}
-            <div class="vbx-slider__wrap">
-                <ul class="vbx-slider__content" style="width: ${100 * items.length / this.active}%">
-                    ${repeat(items, i => i, i => html`<li style="flex-basis: ${this._itemWidth}px; max-width: calc(${100 / items.length}% - 24px);"><slot name="${slotName(i)}"></slot></li>`)}
+            ${cursors ? html`<div class="vbx-slider__prev"
+                @click="${this.prev}"
+                title="${this.i18nPrev || 'Previous'}"
+                tabindex="0"
+                @keypress="${this._prevKeyPress}"
+                rel=prev><vbx-icon shape="angle"
+                    direction="left"
+                    style="top: ${this.cursorOffset}px;"></vbx-icon></div>` : ''}
+            <div class="vbx-slider__wrap"
+                tabindex="0"
+                @keydown="${this._arrowKeyPress}">
+                <ul class="vbx-slider__content"
+                    style="width: ${100 * items.length / this.active}%">
+                    ${repeat(items, i => i, i => html`<li style="flex-basis: ${itemWidth}px; max-width: ${100 / items.length}%;"><slot name="${slotName(i)}"></slot></li>`)}
                 </ul>
             </div>
-            ${cursors ? html`<div class="vbx-slider__next" @click="${this.next}" title="${this.i18nNext || 'Next'}" rel="next"><vbx-icon shape="angle" direction="right" style="top: ${this.cursorOffset}px;"></vbx-icon></div>` : ''}
+            ${cursors ? html`<div class="vbx-slider__next"
+                @click="${this.next}"
+                title="${this.i18nNext || 'Next'}"
+                tabindex="0"
+                @keypress="${this._nextKeyPress}"
+                rel="next"><vbx-icon shape="angle"
+                    direction="right" style="top: ${this.cursorOffset}px;"></vbx-icon></div>` : ''}
         `
     }
 
@@ -272,6 +381,7 @@ export class Slider extends LitElement {
         this._mutationObserver.observe(this, {
             childList: true
         })
+        this.waitUpdates = 3
     }
 
     disconnectedCallback() {
@@ -287,8 +397,10 @@ export class Slider extends LitElement {
     }
 
     updated(changedProps: Map<string | number | symbol, unknown>) {
-        if (changedProps.has('selector') || changedProps.has('active') || changedProps.has('total'))
+        if (changedProps.has('selector') || (changedProps.has('waitUpdates') && this.waitUpdates <= 0))
             this.recalculateCursorOffset()
+        if (this.waitUpdates > 0)
+            setTimeout(() => this.waitUpdates -= 1, 0)
         return super.updated(changedProps)
     }
 
@@ -296,9 +408,6 @@ export class Slider extends LitElement {
         this._updateChildren()
         this.recalculateCount()
         this.recalculateCursorOffset()
-        setTimeout(async () => {
-            await this.updateComplete
-            this.recalculateCursorOffset()
-        }, 10)
+        this.waitUpdates = 3
     }
 }

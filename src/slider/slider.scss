@@ -16,6 +16,7 @@
     }
 
     vbx-icon {
+        transition: top ease-in-out 0.2s;
         position: relative;
         transform: translateY(-0.5em);
     }
@@ -34,10 +35,10 @@ ul.vbx-slider__content {
     margin: 0;
     justify-content: stretch;
     align-items: flex-start;
+    flex: auto 1 1;
 
     & > li {
         display: flex;
         flex: auto 1 1;
-        margin: 12px;
     }
 }

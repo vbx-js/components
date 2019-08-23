@@ -1,17 +1,13 @@
-import { css, customElement, html, LitElement, property } from 'lit-element'
+import { css, customElement, html, LitElement, property, query } from 'lit-element'
 import ResizeObserver from 'resize-observer-polyfill'
+import { DEFAULT_HEIGHT, DEFAULT_WIDTH, INITIAL_WIDTH, OVERLAY_TAG_NAME } from '../helpers/constants'
 import { Origin } from '../helpers/interfaces'
-import { animate, clip } from '../helpers/utils'
+import { animate, clip, eventKeys } from '../helpers/utils'
 import '../icon/icon'
-
-export const DEFAULT_WIDTH = 720
-export const DEFAULT_HEIGHT = 405
-export const INITIAL_WIDTH = 100
-export const TAG_NAME = 'vbx-overlay'
 
 const instances = new Set<Overlay>()
 
-@customElement(TAG_NAME)
+@customElement(OVERLAY_TAG_NAME)
 export class Overlay extends LitElement {
 
     static get styles() {
@@ -47,32 +43,39 @@ export class Overlay extends LitElement {
     @property({ type: Boolean })
     private overlayReady: boolean = true
 
-    private get _bg() {
-        return <HTMLDivElement>this.$('.vbx-overlay__background')
-    }
+    @query('.vbx-overlay__background') private _overlayBackground: HTMLElement
+    @query('.vbx-overlay__video') private _overlayVideo: HTMLElement
+    @query('.vbx-overlay__wrap') private _overlayWrap: HTMLElement
+    @query('.vbx-overlay__sizer') private _overlaySizer: HTMLElement
+    @query('.vbx-overlay__bottom') private _overlayBottom: HTMLElement
 
     private _openingAnimation: Animation
     private _closingAnimation: Animation
     private _dirty = true
-    private _resizeObserver = new ResizeObserver(() => this.recalculateWidth())
+    private readonly _resizeObserver = new ResizeObserver(() => this.recalculateWidth())
 
     static closeInstances(self?: Overlay) {
         instances.forEach(i => i != self && i.hide())
     }
 
-    $(selector: string) {
-        return this.shadowRoot.querySelector(selector) as HTMLElement
-    }
+    /**
+     * Called when player closes and we want to transfer focus to another element
+     *
+     * If triggering player through an external function, be sure to override this
+     * callback before calling {@link Overlay.open}.
+     */
+    onPlayerBlur = () => { }
 
     /**
      * Show Videobox overlay
      *
      * @param from Animation origin, specifying (x, y) and initial size
+     * @param focus If true, focus this element when video opens
      */
-    async show(from?: Origin) {
+    async show(from?: Origin, focus = false) {
         // Check if already open
         if (this.open)
-            return []
+            return
 
         // Cancel any leftover opening animation
         if (this._openingAnimation) {
@@ -85,7 +88,7 @@ export class Overlay extends LitElement {
                 instance.hide()
         })
 
-        // Set state to open
+        // Set state to open, but not ready
         this.open = true
         this.contentOpen = true
         this.overlayReady = false
@@ -101,7 +104,7 @@ export class Overlay extends LitElement {
 
         const promises: Array<Promise<any>> = []
 
-        const bg = this._bg
+        const bg = this._overlayBackground
         if (bg) {
             const { animation, promise } = animate(bg, [
                 {
@@ -120,15 +123,27 @@ export class Overlay extends LitElement {
             )
         }
 
-        promises.push(this.animateContent(from || {}))
+        promises.push(this._animateContent(from || {}))
 
-        return Promise.all(promises)
+        await Promise.all(promises)
+
+        const video = this._overlayVideo
+        if (focus && video)
+            video.focus()
     }
 
     /**
      * Hide Videobox overlay
+     *
+     * @param evt Mouse event
+     * @param notifyBlur If true, call {@link Overlay.onPlayerBlur} callback
      */
-    async hide() {
+    async hide(evt?: MouseEvent, notifyBlur = false) {
+        if (evt) {
+            evt.stopPropagation()
+            evt.preventDefault()
+        }
+
         // Check if already closed or closing
         if (!this.open || this._closingAnimation)
             return
@@ -141,7 +156,7 @@ export class Overlay extends LitElement {
 
         this.contentOpen = false
 
-        const bg = this._bg
+        const bg = this._overlayBackground
         if (bg) {
             const { animation, promise } = animate(bg, [
                 {
@@ -168,6 +183,9 @@ export class Overlay extends LitElement {
 
         if (bg)
             bg.style.opacity = ''
+
+        if (notifyBlur && this.onPlayerBlur)
+            this.onPlayerBlur()
     }
 
     /**
@@ -205,9 +223,9 @@ export class Overlay extends LitElement {
      *
      * @param origin Animation origin, specifying (x, y) and initial size
      */
-    private async animateContent(origin: Origin) {
-        const content = <HTMLDivElement>this.$('.vbx-overlay__wrap')
-        if (!content)
+    private async _animateContent(origin: Origin) {
+        const wrap = this._overlayWrap
+        if (!wrap)
             return
 
         await this.updateComplete
@@ -266,11 +284,11 @@ export class Overlay extends LitElement {
         if (!d)
             d = 1.5 * Math.abs(initialW - this.width)
 
-        promises.push(animate(content, [from, to], d).promise)
+        promises.push(animate(wrap, [from, to], d).promise)
 
         // Change ratio when expanding
         if (origin.h && origin.w) {
-            const sizer = <HTMLDivElement>this.$('.vbx-overlay__sizer')
+            const sizer = this._overlaySizer
             if (sizer) {
                 const r0 = 100 * maxH / maxW
                 const r = 100 * origin.h / origin.w
@@ -292,7 +310,7 @@ export class Overlay extends LitElement {
 
         await this.updateComplete
 
-        const bottom = this.$('.vbx-overlay__bottom')
+        const bottom = this._overlayBottom
         if (bottom) {
             await animate(bottom, [
                 {
@@ -305,23 +323,55 @@ export class Overlay extends LitElement {
         }
     }
 
+    @eventKeys(
+        'Enter', 13,
+        'Space', 12
+    )
+    private _closeKeyPress(evt: KeyboardEvent) {
+        evt.stopPropagation()
+        evt.preventDefault()
+        // Transfer focus when closing through keyboard
+        this.hide(undefined, true)
+    }
+
+    @eventKeys(
+        'Escape', 27,
+        'KeyX', 88
+    )
+    private _keyPress(evt: KeyboardEvent) {
+        evt.stopPropagation()
+        evt.preventDefault()
+        // Transfer focus when closing through keyboard
+        this.hide(undefined, true)
+    }
+
     render() {
         const maxWidth = clip(this.maxWidth, DEFAULT_WIDTH)
         const maxHeight = clip(this.maxHeight, DEFAULT_HEIGHT)
         return html`
-            <div class="vbx-overlay__background" @click="${this.hide}" title="${this.i18nClose || 'Close'}"></div>
-            <div class="vbx-overlay__wrap" style="width: ${this.width}px;">
-                <div class="vbx-overlay__sizer" style="padding-bottom: ${100 * maxHeight / maxWidth}%;">
+            <div class="vbx-overlay__background"
+                @click="${this.hide}"
+                title="${this.i18nClose || 'Close'}"></div>
+            <div class="vbx-overlay__wrap"
+                style="width: ${this.width}px;">
+                <div class="vbx-overlay__sizer"
+                    style="padding-bottom: ${100 * maxHeight / maxWidth}%;">
                     ${this.contentOpen ? html`<div class="vbx-overlay__content">
-                        <div class="vbx-overlay__video">
-                            <iframe allowfullscreen src="${this.overlayReady && this.src || ''}" allow="autoplay"></iframe>
+                        <div class="vbx-overlay__video"
+                            tabindex="0"
+                            @keydown="${this._keyPress}">
+                            <iframe allowfullscreen
+                                src="${this.overlayReady && this.src || ''}"
+                                allow="autoplay"
+                                tabindex="-1"></iframe>
                         </div>
                         ${this.overlayReady ? html`<div class="vbx-overlay__bottom">
                             <div class="vbx-overlay__bottom-content"><strong>${this.description}</strong></div>
-                            <div class="vbx-overlay__bottom-button" @click="${this.hide}" title="${this.i18nClose || 'Close'}">
-                                <span>${this.i18nClose || 'Close'}</span>
-                                <vbx-icon shape="close"></vbx-icon>
-                            </div>
+                            <div class="vbx-overlay__bottom-button"
+                                @click="${this.hide}"
+                                title="${this.i18nClose || 'Close'}"
+                                @keydown="${this._closeKeyPress}"
+                                tabindex="0"><span>${this.i18nClose || 'Close'}</span><vbx-icon shape="close"></vbx-icon></div>
                         </div>` : ''}
                     </div>` : ''}
                 </div>

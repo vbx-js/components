@@ -15,19 +15,27 @@ html {
     --vbx-invert-color: #ffffff;
     --vbx-invert-color-hover: var(--vbx-main-color-hover);
 
-    /* COntent with overlay */
+    /* Content with overlay */
     --vbx-overlay-color: var(--vbx-invert-color);
     --vbx-overlay-color-hover: var(--vbx-invert-color-hover);
+
+    /* Pagination content */
+    --vbx-pagination-color: var(--vbx-main-color);
+    --vbx-pagination-color-hover: var(--vbx-main-color);
+    --vbx-pagination-color-active: var(--vbx-main-color);
+    --vbx-pagination-background: rgba(0, 0, 0, 0);
+    --vbx-pagination-background-hover: var(--vbx-main-color-hover);
+    --vbx-pagination-background-active: var(--vbx-main-color-hover);
 }
 
-vbx-slider vbx-button {
+vbx-slider vbx-button,
+vbx-pagination vbx-button {
     flex: auto 0 0;
+    margin: 12px !important;
+    max-width: calc(100% - 24px) !important;
 }
 
-vbx-button img {
-    flex: auto 0 0;
-}
-
+vbx-button img,
 vbx-trigger img {
     flex: auto 0 0;
 }

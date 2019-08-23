@@ -37,39 +37,66 @@ export function show(el: HTMLElement) {
     }
 }
 
-export function debounce<F extends () => any>(func: F, waitMilliseconds = 50, isImmediate = false) {
-    let timeoutId: any
-    let promise: Promise<ReturnType<F>>
-    let resolve: (val: ReturnType<F>) => void
-    let reject: (err: any) => void
+export function getComputedValue<T extends keyof CSSStyleDeclaration>(container: HTMLElement, cssProp: T) {
+    return window.getComputedStyle(container, null)[cssProp]
+}
 
-    const doLater = () => {
-        timeoutId = undefined
-        if (!isImmediate) {
-            Promise.resolve(func())
-                .then(resolve, reject)
+export function eventKeys(...capture: Array<string | number>) {
+    const codes = new Set(capture.filter(c => typeof c == 'string'))
+    const keyCodes = new Set(capture.filter(c => typeof c == 'number'))
+    return <T extends (event: KeyboardEvent) => any>(_target: Object, _key: string | symbol, descriptor: TypedPropertyDescriptor<T>) => {
+        const old = descriptor.value
+        descriptor.value = <any>function (event: KeyboardEvent) {
+            if (codes.has(event.code) ||
+                codes.has(event.key) ||
+                // tslint:disable-next-line:deprecation
+                keyCodes.has(event.keyCode)
+            )
+                return old.apply(this, arguments)
         }
-        promise = null
-        resolve = null
-        reject = null
+        return descriptor
     }
+}
 
-    return async () => {
-        if (timeoutId !== undefined) {
-            clearTimeout(timeoutId)
-        } else {
-            promise = new Promise<ReturnType<F>>((res, rej) => {
-                resolve = res
-                reject = rej
-            })
+export function debounce(waitMilliseconds = 50, isImmediate = false) {
+    return <F extends () => Promise<any>>(_target: Object, _key: string | symbol, descriptor: TypedPropertyDescriptor<F>) => {
+        let timeoutId: any
+        let promise: Promise<ReturnType<F>>
+        let resolve: (val: ReturnType<F>) => void
+        let reject: (err: any) => void
+        let that: any
+
+        const func = descriptor.value
+        const doLater = () => {
+            timeoutId = undefined
+            if (!isImmediate) {
+                Promise.resolve(func.apply(that))
+                    .then(resolve, reject)
+            }
+            promise = null
+            resolve = null
+            reject = null
         }
 
-        timeoutId = setTimeout(doLater, waitMilliseconds)
+        descriptor.value = <any>function () {
+            that = this
+            if (timeoutId !== undefined) {
+                clearTimeout(timeoutId)
+            } else {
+                promise = new Promise<ReturnType<F>>((res, rej) => {
+                    resolve = res
+                    reject = rej
+                })
+            }
 
-        if (isImmediate && timeoutId === undefined) {
-            Promise.resolve(func())
-                .then(resolve, reject)
+            timeoutId = setTimeout(doLater, waitMilliseconds)
+
+            if (isImmediate && timeoutId === undefined) {
+                Promise.resolve(func.apply(that))
+                    .then(resolve, reject)
+            }
+            return promise
         }
-        return promise
+        return descriptor
     }
 }
