@@ -11,7 +11,7 @@ ul.vbx-pagination__wrap {
     margin: 0;
     justify-content: stretch;
     align-items: flex-start;
-    flex: auto 1 1;
+    flex: 100% 1 1;
     flex-wrap: wrap;
     max-width: 100%;
 
@@ -32,7 +32,7 @@ ul.vbx-pagination__pages {
     margin: 0;
     justify-content: center;
     align-items: center;
-    flex: auto 1 1;
+    flex: 100% 1 1;
     max-width: 100%;
 
     & > li {
