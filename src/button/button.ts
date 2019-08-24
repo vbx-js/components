@@ -1,7 +1,7 @@
 import { css, customElement, html, LitElement, property, query } from 'lit-element'
-import { DEFAULT_HEIGHT, DEFAULT_WIDTH, INLINE_TAG_NAME, OVERLAY_TAG_NAME, PlayerEventType, PlayerType } from '../helpers/constants'
+import { INLINE_TAG_NAME, OVERLAY_TAG_NAME, PlayerEventType, PlayerType } from '../helpers/constants'
 import { Origin } from '../helpers/interfaces'
-import { clip, eventKeys } from '../helpers/utils'
+import { eventKeys } from '../helpers/utils'
 import { Inline } from '../inline/inline'
 import { Overlay } from '../overlay/overlay'
 
@@ -21,17 +21,11 @@ export class Button extends LitElement {
         }`]
     }
 
-    @property({ type: Number, reflect: true, attribute: 'max-width' })
-    maxWidth: number
-
-    @property({ type: Number, reflect: true, attribute: 'max-height' })
-    maxHeight: number
-
     @property({ type: String, reflect: true })
     src: string
 
     @property({ type: String, reflect: true })
-    player: PlayerType = PlayerType.Overlay
+    player: string
 
     @property({ type: String, reflect: true })
     description: string
@@ -56,6 +50,19 @@ export class Button extends LitElement {
         return this.selector && this.querySelector(this.selector)
     }
 
+    private get _player() {
+        const [tp] = (this.player || '').split('#')
+        if (tp in PLAYER_TYPE_MAP)
+            return tp as PlayerType
+
+        return PlayerType.Overlay
+    }
+
+    private get _playerId() {
+        const [, id] = (this.player || '').split('#')
+        return (id || '').trim()
+    }
+
     /**
      * Open player according to button attributes
      *
@@ -71,7 +78,7 @@ export class Button extends LitElement {
         if (!focus && this.shadowRoot.activeElement && this.shadowRoot.activeElement['blur'])
             (this.shadowRoot.activeElement as HTMLElement).blur()
 
-        switch (this.player) {
+        switch (this._player) {
             case PlayerType.Inline:
                 const inline = this._getInlineInstance()
                 if (this._inlinePlayer && this._inlinePlayer != inline)
@@ -83,8 +90,6 @@ export class Button extends LitElement {
 
                 this._inlinePlayer.src = this.src
                 this._inlinePlayer.description = this.description
-                this._inlinePlayer.maxWidth = clip(this.maxWidth, DEFAULT_WIDTH)
-                this._inlinePlayer.maxHeight = clip(this.maxHeight, DEFAULT_HEIGHT)
                 this._inlinePlayer.onPlayerBlur = this._onPlayerBlur
                 this._inlinePlayer.addEventListener(PlayerEventType.OpenChange, this._inlineOpenListener)
                 this.inlineOpen = this._inlinePlayer.open
@@ -98,8 +103,6 @@ export class Button extends LitElement {
 
                 overlay.src = this.src
                 overlay.description = this.description
-                overlay.maxWidth = clip(this.maxWidth, DEFAULT_WIDTH)
-                overlay.maxHeight = clip(this.maxHeight, DEFAULT_HEIGHT)
                 overlay.onPlayerBlur = this._onPlayerBlur
 
                 return overlay.show(this._getOrigin(), focus)
@@ -142,9 +145,12 @@ export class Button extends LitElement {
     }
 
     private _getOverlayInstance() {
-        let instance = <Overlay>document.querySelector(OVERLAY_TAG_NAME)
+        const id = this._playerId
+        let instance = <Overlay>document.querySelector(id ? `${OVERLAY_TAG_NAME}#${id}` : OVERLAY_TAG_NAME)
         if (!instance) {
             instance = new Overlay()
+            if (id)
+                instance.id = id
             document.body.appendChild(instance)
         }
         return instance
@@ -202,7 +208,7 @@ export class Button extends LitElement {
     }
 
     render() {
-        return this.player == PlayerType.Inline && this.inlineOpen
+        return this._player == PlayerType.Inline && this.inlineOpen
             ? this.directPlayer
                 ? html`<slot name="${PLAYER_SLOT}"></slot>`
                 : html`<slot></slot>`

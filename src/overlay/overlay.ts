@@ -31,6 +31,9 @@ export class Overlay extends LitElement {
     @property({ type: String, reflect: true })
     description: string
 
+    @property({ type: Boolean, reflect: true, attribute: 'hide-bottom' })
+    hideBottom: boolean = false
+
     @property({ type: String, reflect: true, attribute: 'data-close' })
     i18nClose: string
 
@@ -234,11 +237,11 @@ export class Overlay extends LitElement {
         const maxH = clip(this.maxHeight, DEFAULT_HEIGHT)
 
         const promises: Array<Promise<any>> = []
-        const from = {
-            transform: 'translateY(0px)'
-        }
-        const to = {
-            transform: 'translateY(-30px)'
+        const from: Keyframe = {}
+        const to: Keyframe = {}
+        if (!this.hideBottom) {
+            from.transform = 'translateY(0px)'
+            to.transform = 'translateY(-30px)'
         }
         let d = 0
 
@@ -311,7 +314,7 @@ export class Overlay extends LitElement {
         await this.updateComplete
 
         const bottom = this._overlayBottom
-        if (bottom) {
+        if (bottom && !this.hideBottom) {
             await animate(bottom, [
                 {
                     transform: 'translateY(-100%)'
@@ -352,7 +355,7 @@ export class Overlay extends LitElement {
             <div class="vbx-overlay__background"
                 @click="${this.hide}"
                 title="${this.i18nClose || 'Close'}"></div>
-            <div class="vbx-overlay__wrap"
+            <div class="vbx-overlay__wrap ${this.hideBottom ? 'vbx-overlay__wrap--no-bottom' : ''}"
                 style="width: ${this.width}px;">
                 <div class="vbx-overlay__sizer"
                     style="padding-bottom: ${100 * maxHeight / maxWidth}%;">

@@ -97,7 +97,7 @@ export class Inline extends LitElement {
     async show(from?: Origin, focus = false) {
         // Keep target proprtions
         if (this._inPager && from && from.w && from.h) {
-            this.maxHeight = from.h / from.w * this.maxWidth
+            this.maxHeight = from.h / from.w * this._width
         }
 
         // Check if already open
@@ -128,7 +128,7 @@ export class Inline extends LitElement {
 
             // Keep target proprtions
             if (this._inPager)
-                this.maxHeight = from.h / from.w * this.maxWidth
+                this.maxHeight = from.h / from.w * this._width
         }
 
         // Set state to open, but not ready
